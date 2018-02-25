@@ -1,5 +1,5 @@
 <h3 align="center">
-	<img src="http://f52.tech/_nuxt/img/logo.89beae5.png" width="100%" />
+	<img src="http://f52.tech/_nuxt/img/logo.89beae5.png" width="50" />
 </h3>
 <p align="center">
 </p>
