@@ -10,8 +10,6 @@ contact: <a href="mailto:cedric@f52.tech">cedric@f52.tech</a> | website: <a href
 
 # git-book-v2-examples-generator [en]
 
-Python script to generate Git Branching examples exactly as they are described in the git book (v2).
-
 When you learn git, sometimes you read the [book](https://git-scm.com/book/en/v2) (or parts of it).
 
 When you read the book about branching, sometimes you want to play with the example that is given.
@@ -28,13 +26,11 @@ You can either:
 
 # git-book-v2-examples-generator [fr]
 
-Script Python pour générer les exemples du livre Git exactement comme ils apparaissent dans le livre (v2).
-
 Quand vous apprenez git, des fois, vous lisez le [livre](https://git-scm.com/book/fr/v2) (ou au moins des morceaux).
 
 Et quand vous lisez le livre au chapitre des branches, des fois, voulez jouer avec les exemples qui sont donnés.
 
-Ici se trouve done un script Python3 pour générer ces dépôts git, exactement comme ils apparaissent dans le livre, pour vous permettre de jouer et expérimenter avec autant de fois que vous le désirez. Pour vos propres exercices, ou pour les enseigner.
+Ici se trouve donc un script Python3 pour générer ces dépôts git, exactement comme ils apparaissent dans le livre, pour vous permettre de jouer et expérimenter avec autant de fois que vous le désirez. Pour vos propres exercices, ou pour les enseigner.
 
 Vous pouvez soit:
 - exécuter `git clone` sur ce dépôt, et ensuite exécuter le script vous-même: `python3 ./generator.py`
