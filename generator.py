@@ -18,9 +18,14 @@ class Command(object):
         return self.executable + ' ' + ' '.join(self.args)
 
     def execute(self):
-        if self.verbose: print(' - Executing: \"' + str(self) + '\"')
+        if self.verbose: print(' > ' + str(self))
         out = None if self.verbose else subprocess.PIPE
-        subprocess.run([self.executable, *self.args], check=True, stdout=out, stderr=out)
+        # Awful hack because echo command has no effect with subprocess.run, and I don't know why.
+        if self.executable == 'echo':
+            with open(self.args[-1], 'a') as f:
+                f.write(self.args[0].replace('"', '')+'\n\n')
+        else:
+            subprocess.run([self.executable, *self.args], check=True, shell=False, stdout=out, stderr=out)
 
 
 class GitCommand(Command):
@@ -33,18 +38,47 @@ class GitProject(object):
         self.folder_name = folder_name
         self.always_proceed = always_proceed
         self.verbose = verbose
-        self.commands = [GitCommand('init')]
+        self.commands = [GitCommand('init', verbose=verbose)]
 
-    def append_command(self, executable, *args):
-        self.commands.append(Command(executable, args, verbose=self.verbose))
+    def _append_command(self, executable, *args):
+        self.commands.append(Command(executable, *args, verbose=self.verbose))
 
-    def append_git_command(self, command, *args):
+    def _append_echo_command(self, filename, content):
+        self._append_command('echo', '\"' + content + '\"', '>>', filename)
+
+    def git(self, command, *args):
         self.commands.append(GitCommand(command, *args, verbose=self.verbose))
 
-    def append_new_file_command(self, file_root_name):
-        self.commands.append(Command('touch', file_root_name+'txt', verbose=self.verbose))
-        self.commands.append(GitCommand('add', '.', verbose=self.verbose))
-        self.commands.append(GitCommand('commit', '-m', file_root_name, verbose=self.verbose))
+    def append_to_readme(self, content):
+        self._append_command('touch', 'README.md')
+        self._append_echo_command('README.md', content)
+        self.git('add', '.')
+        self.git('commit', '-m', 'README')
+
+    def create_new_file(self, filename, content=None, message=None):
+        self._append_command('touch', filename)
+        if content is not None:
+            self._append_echo_command(filename, content)
+        self.git('add', '.')
+        if message is None:
+            message = filename
+        self.git('commit', '-m', message)
+
+    def append_content_to_file(self, filename, content, message=None):
+        self._append_echo_command(filename, content)
+        self.git('add', '.')
+        if message is None:
+            message = filename
+        self.git('commit', '-m', message)
+
+    def override_file_content(self, filename, new_content, message=None):
+        self._append_command('rm', '-f', filename)
+        self._append_command('touch', filename)
+        self._append_echo_command(filename, content)
+        self.git('add', '.')
+        if message is None:
+            message = filename
+        self.git('commit', '-m', message)
 
     def reset(self):
         if not self.always_proceed:
@@ -82,46 +116,56 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     gp = GitProject('git-book-v2-chapter-3.1-branches-in-a-nutshell', always_proceed=args.always_proceed, verbose=args.verbose)
-    gp.append_new_file_command('98ca9')
-    gp.append_new_file_command('34ac2')
-    gp.append_new_file_command('f30ab')
-    gp.append_git_command('branch', 'testing')
-    gp.append_git_command('checkout', 'testing')
-    gp.append_new_file_command('87ab2')
-    gp.append_git_command('checkout', 'master')
-    gp.append_new_file_command('c2b9e')
+    gp.create_new_file('98ca9.txt')
+    gp.create_new_file('34ac2.txt')
+    gp.create_new_file('f30ab.txt')
+    gp.git('branch', 'testing')
+    gp.git('checkout', 'testing')
+    gp.create_new_file('87ab2.txt')
+    gp.git('checkout', 'master')
+    gp.create_new_file('c2b9e.txt')
     gp.create()
 
     gp = GitProject('git-book-v2-chapter-3.2-basic-branching-and-merging-1-hotfix', always_proceed=args.always_proceed, verbose=args.verbose)
-    gp.append_new_file_command('c0')
-    gp.append_new_file_command('c1')
-    gp.append_new_file_command('c2')
-    gp.append_git_command('branch', 'iss53')
-    gp.append_git_command('checkout', 'iss53')
-    gp.append_new_file_command('c3')
-    gp.append_git_command('checkout', 'master')
-    gp.append_git_command('branch', 'hotfix')
-    gp.append_git_command('checkout', 'hotfix')
-    gp.append_new_file_command('c4')
+    gp.append_to_readme('### Git Book v2 Chapter 3.2 : Figure 21')
+    gp.append_to_readme('**Purpose** : do the merge and the delete of hotfix branch yourself.')
+    gp.append_to_readme('![Figure 21](https://git-scm.com/book/en/v2/images/basic-branching-4.png)')
+    gp.create_new_file('index.html', 'line master c0', message='c0')
+    gp.append_content_to_file('index.html', 'line master c1', message='c1')
+    gp.append_content_to_file('index.html', 'line master c2', message='c2')
+    gp.git('branch', 'iss53')
+    gp.git('checkout', 'iss53')
+    gp.append_content_to_file('index.html', 'line iss53 c3', message='c3')
+    gp.git('checkout', 'master')
+    gp.git('branch', 'hotfix')
+    gp.git('checkout', 'hotfix')
+    gp.append_content_to_file('index.html', 'line hotfix c4', message='c4')
     gp.create()
 
-    gp = GitProject('git-book-v2-chapter-3.2-basic-branching-and-merging-2-no-conflict', always_proceed=args.always_proceed, verbose=args.verbose)
-    gp.append_new_file_command('c0')
-    gp.append_new_file_command('c1')
-    gp.append_new_file_command('c2')
-    gp.append_git_command('branch', 'iss53')
-    gp.append_git_command('checkout', 'iss53')
-    gp.append_new_file_command('c3')
-    gp.append_git_command('checkout', 'master')
-    gp.append_git_command('branch', 'hotfix')
-    gp.append_git_command('checkout', 'hotfix')
-    gp.append_new_file_command('c4')
-    gp.append_git_command('checkout', 'master')
-    gp.append_git_command('merge', 'hotfix')
-    gp.append_git_command('branch', '-d', 'hotfix')
-    gp.append_git_command('checkout', 'iss53')
-    gp.append_new_file_command('c5')
-    gp.create()
-
-    gp = gp.duplicate('git-book-v2-chapter-3.2-basic-branching-and-merging-3-with-conflict')
-    gp.create()
+    # gp = GitProject('git-book-v2-chapter-3.2-basic-branching-and-merging-2-no-conflict', always_proceed=args.always_proceed, verbose=args.verbose)
+    # gp.add_readme('Git Book v2 Chapter 3.2 : **Figure 24**')
+    # gp.create_new_file('index.html', 'line master c0\n', message='c0')
+    # gp.append_content_to_file('index.html', 'line master c1\n', message='c1')
+    # gp.append_content_to_file('index.html', 'line master c2\n', message='c2')
+    # gp.git('branch', 'iss53')
+    # gp.git('checkout', 'iss53')
+    # gp.append_content_to_file('index.html', 'line master c3\n', message='c3')
+    # gp.git('checkout', 'master')
+    # gp.append_content_to_file('index.html', 'line master/hotfix c4\n', message='c4')
+    # gp.git('checkout', 'iss53')
+    # gp.append_content_to_file('index.html', 'line master c5\n', message='c5')
+    #
+    # gp.append_new_file_command('c3')
+    # gp.append_git_command('checkout', 'master')
+    # gp.append_git_command('branch', 'hotfix')
+    # gp.append_git_command('checkout', 'hotfix')
+    # gp.append_new_file_command('c4')
+    # gp.append_git_command('checkout', 'master')
+    # gp.append_git_command('merge', 'hotfix')
+    # gp.append_git_command('branch', '-d', 'hotfix')
+    # gp.append_git_command('checkout', 'iss53')
+    # gp.append_new_file_command('c5')
+    # gp.create()
+    #
+    # gp = gp.duplicate('git-book-v2-chapter-3.2-basic-branching-and-merging-3-with-conflict')
+    # gp.create()
